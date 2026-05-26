@@ -1,0 +1,6 @@
+{
+  "name": "СберБанк",
+  "description": "Полнофункциональный клон СберБанк Онлайн с интерактивными переводами, анализом бюджета, конструктором карт и умным голосовым ассистентом Салют на базе Gemini API.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
