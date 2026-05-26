@@ -27,6 +27,44 @@ class BankViewModel(application: Application) : AndroidViewModel(application) {
     private val _userPhone = MutableStateFlow(sharedPrefs.getString("user_phone", "+7 (911) 333-44-55") ?: "+7 (911) 333-44-55")
     val userPhone: StateFlow<String> = _userPhone.asStateFlow()
 
+    private val _isHideBalances = MutableStateFlow(sharedPrefs.getBoolean("hide_balances2", false))
+    val isHideBalances: StateFlow<Boolean> = _isHideBalances.asStateFlow()
+
+    private val _isBiometricsEnabled = MutableStateFlow(sharedPrefs.getBoolean("use_biometrics", true))
+    val isBiometricsEnabled: StateFlow<Boolean> = _isBiometricsEnabled.asStateFlow()
+
+    private val _isSmsEnabled = MutableStateFlow(sharedPrefs.getBoolean("use_sms", true))
+    val isSmsEnabled: StateFlow<Boolean> = _isSmsEnabled.asStateFlow()
+
+    private val _assistantPersona = MutableStateFlow(sharedPrefs.getString("assistant_persona", "sber") ?: "sber")
+    val assistantPersona: StateFlow<String> = _assistantPersona.asStateFlow()
+
+    fun setHideBalances(value: Boolean) {
+        _isHideBalances.value = value
+        sharedPrefs.edit().putBoolean("hide_balances2", value).apply()
+    }
+
+    fun setBiometricsEnabled(value: Boolean) {
+        _isBiometricsEnabled.value = value
+        sharedPrefs.edit().putBoolean("use_biometrics", value).apply()
+    }
+
+    fun setSmsEnabled(value: Boolean) {
+        _isSmsEnabled.value = value
+        sharedPrefs.edit().putBoolean("use_sms", value).apply()
+    }
+
+    fun setAssistantPersona(value: String) {
+        _assistantPersona.value = value
+        sharedPrefs.edit().putString("assistant_persona", value).apply()
+    }
+
+    fun clearChatMessages() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.clearChatHistory()
+        }
+    }
+
     fun updateProfile(newName: String, newPhone: String) {
         _userName.value = newName
         _userPhone.value = newPhone
@@ -231,9 +269,26 @@ class BankViewModel(application: Application) : AndroidViewModel(application) {
                 "- ${if (it.type == "TRANSFER_OUT" || it.type == "PAYMENT") "Расход" else "Доход"} на сумму ${formatCurrency(it.amount)} в категории '${it.category}' -> Кому/Где: ${it.recipientName}"
             }
 
+            val personaName = when (assistantPersona.value) {
+                "sber" -> "Сбер"
+                "joy" -> "Джой"
+                "athena" -> "Афина"
+                else -> "Сбер"
+            }
+
+            val personaStyle = when (assistantPersona.value) {
+                "sber" -> "Ты — Сбер, умный, глубоко профессиональный, надежный и вежливый финансовый ассистент Сбербанка. Общайся деловито, уверенно, структурированно, отвечай точно на вопросы. Используй официальный, но дружелюбный тон. Избегай воды."
+                "joy" -> "Ты — Джой, невероятно жизнерадостная, активная, позитивная и современная девушка-ассистент Сбербанка. Общайся тепло, легко и непринужденно, используй уместно позитивный современный сленг и много соответствующих эмодзи (улыбки, огонь, ракеты ✨🚀🔥). Подбадривай пользователя Михаила в его финансовых целях!"
+                "athena" -> "Ты — Афина, исключительно утонченная, интеллигентная, спокойная и начитанная женщина-ассистент Сбербанка. Твоя речь изысканна, глубоко вежлива и структурирована с упором на факты, аналитику и финансовую грамотность. Избегай лишних эмоций, используй академические и разумные формулировки."
+                else -> "Ты — Сбер, умный и технологичный финансовый ассистент."
+            }
+
             val systemInstructionText = """
-                Ты — Салют, умный, отзывчивый, вежливый и технологичный финансовый ассистент СберБанка. Твоя миссия — помогать пользователю (Михаил) управлять своими финансами, советовать выгодные вложения и анализировать его бюджет.
-                Общайся вежливо, профессионально и дружелюбно на русском языке. Ответы должны быть ёмкими, полезными, структурированными в стиле Сбера. Избегай длинной воды.
+                Ты — виртуальный ассистент Салют от СберБанка. В данном сеансе твоё имя и характер: $personaName.
+                $personaStyle
+                
+                Твоя миссия — помогать пользователю (Михаил) управлять своими финансами, анализировать его бюджет и советовать выгодные вложения.
+                Общайся на русском языке. Ответы должны быть ёмкими, полезными и структурированными.
                 
                 Тебе полностью известна финансовая сводка пользователя на данный момент:
                 КАРТЫ пользователя:
@@ -247,7 +302,7 @@ class BankViewModel(application: Application) : AndroidViewModel(application) {
                 
                 Будь готов ответить на вопросы по балансу конкретных карт, проанализировать расходы по категориям, подсказать по ставкам вкладов.
                 Если пользователь хочет перевести деньги, вежливо подскажи ему перейти на вкладку 'Платежи'.
-                Придумай короткое, но запоминающееся финансовое пожелание или совет, если это уместно. Применяй эмодзи сдержанно для красоты.
+                Придумай короткое финансовое пожелание или совет, соответствующий твоему характеру $personaName, если это уместно.
             """.trimIndent()
 
             // Construct full chat log history for context
@@ -259,9 +314,17 @@ class BankViewModel(application: Application) : AndroidViewModel(application) {
             if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
                 // Return immediate smart local offline response if no API key is provided
                 delay(1200)
-                val responseText = "Привет, Михаил! Извините, но в системе отсутствует настроенный API-ключ Gemini. \n\nТем не менее, я вижу ваши финансы в реальном времени! Баланс вашей основной СберКарты составляет ${
-                    cards.value.firstOrNull()?.let { formatCurrency(it.balance) } ?: "0 ₽"
-                }. Могу настроить вам новый дизайн картинок или помочь сделать переводы на вкладке рядом!"
+                val responseText = when (assistantPersona.value) {
+                    "joy" -> "Привет, Миш! ✨ Рада поболтать! Сорри, но АПИ-ключ Gemini у нас пока не залетел. Но знаешь что? Я вижу твои балансы прямо перед глазами! Твоя основная СберКарта заряжена на ${
+                        cards.value.firstOrNull()?.let { formatCurrency(it.balance) } ?: "0 ₽"
+                    }! Пойдем поменяем скин на Cyberpunk или сделаем улетный перевод на сопредельной вкладке? Готова жечь! 🔥🚀"
+                    "athena" -> "Приветствую вас, уважаемый Михаил. В данный момент интеграция с платформой Gemini не завершена по причине отсутствия API-ключа в конфигурации.\n\nТем не менее, я имею защищенный доступ к вашей финансовой сводке: баланс вашей основной дебетовой карты составляет ${
+                        cards.value.firstOrNull()?.let { formatCurrency(it.balance) } ?: "0 ₽"
+                    }. Мы можем настроить художественное оформление ваших карт или произвести межбанковские транзакции в меню платежей."
+                    else -> "Привет, Михаил! Я твой ассистент Сбер. К сожалению, API-ключ Gemini не прописан в настройках.\n\nНо я всегда рядом и вижу все ваши счета! Баланс СберКарты равен ${
+                        cards.value.firstOrNull()?.let { formatCurrency(it.balance) } ?: "0 ₽"
+                    }. Давайте я помогу вам выбрать новый дизайн для карты в Профиле или спланировать переводы на вкладке 'Платежи'!"
+                }
                 repository.addChatMessage(ChatMessageEntity(role = "model", messageText = responseText))
                 _isAssistantLoading.value = false
                 return@launch
