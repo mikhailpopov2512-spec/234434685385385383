@@ -1,4 +1,3 @@
-
 name: Android CI (Kotlin Build & Test)
 
 on:
@@ -30,7 +29,11 @@ jobs:
       - name: Fix corrupted gradle-wrapper.jar
         run: |
           rm -f gradle/wrapper/gradle-wrapper.jar
-          curl -L -o gradle/wrapper/gradle-wrapper.jar https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar
+          cd gradle/wrapper
+          wget https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -j gradle-8.7-bin.zip gradle-8.7/lib/gradle-wrapper.jar -d .
+          rm gradle-8.7-bin.zip
+          cd ../..
 
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest --no-daemon
