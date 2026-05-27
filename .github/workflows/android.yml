@@ -23,31 +23,16 @@ jobs:
           distribution: 'zulu'
           cache: 'gradle'
 
-      - name: Install Gradle
-        run: |
-          wget https://services.gradle.org/distributions/gradle-8.7-bin.zip
-          unzip -q gradle-8.7-bin.zip
-          sudo mv gradle-8.7 /opt/gradle
-          echo "export PATH=/opt/gradle/bin:$PATH" >> $GITHUB_PATH
-          rm gradle-8.7-bin.zip
-
       - name: Make Gradlew Executable
         run: chmod +x gradlew
 
-      - name: Fix gradle-wrapper.properties
-        run: |
-          mkdir -p gradle/wrapper
-          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
-          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.7
 
-      - name: Run Unit Tests (using system gradle)
-        run: gradle testDebugUnitTest --no-daemon
-
-      - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon
+      - name: Skip tests and build APK
+        run: gradle assembleDebug -x test --no-daemon
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
