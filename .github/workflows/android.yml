@@ -22,13 +22,10 @@ jobs:
           java-version: '17'
           distribution: 'zulu'
 
-      - name: Setup Gradle (версия 9.3.1 — требуется плагином)
+      - name: Setup Gradle (без вашего повреждённого wrapper)
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 9.3.1
-
-      - name: Make Gradlew Executable
-        run: chmod +x gradlew
 
       - name: Build Debug APK (тесты отключены)
         run: gradle assembleDebug -x test --no-daemon
