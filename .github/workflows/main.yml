@@ -5,7 +5,7 @@ on:
     branches: [ "main", "master", "develop" ]
   pull_request:
     branches: [ "main", "master", "develop" ]
-  workflow_dispatch: # Позволяет запускать сборку вручную из вкладки Actions
+  workflow_dispatch: # Allows manually starting the workflow from the Actions tab
 
 jobs:
   build:
